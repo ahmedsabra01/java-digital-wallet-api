@@ -2,6 +2,7 @@ package com.sabra.wallet.service;
 
 import com.sabra.wallet.dto.request.DepositRequest;
 import com.sabra.wallet.dto.request.WalletCreateRequest;
+import com.sabra.wallet.dto.response.DepositResponse;
 import com.sabra.wallet.dto.response.WalletResponse;
 import com.sabra.wallet.entity.Customer;
 import com.sabra.wallet.entity.Transaction;
@@ -10,6 +11,7 @@ import com.sabra.wallet.entity.Wallet;
 import com.sabra.wallet.exception.CustomerNotFoundException;
 import com.sabra.wallet.exception.WalletAlreadyExistsException;
 import com.sabra.wallet.exception.WalletNotFoundException;
+import com.sabra.wallet.mapper.TransactionMapper;
 import com.sabra.wallet.mapper.WalletMapper;
 import com.sabra.wallet.repository.CustomerRepository;
 import com.sabra.wallet.repository.TransactionRepository;
@@ -26,13 +28,15 @@ public class WalletServiceImpl implements WalletService{
     private final WalletRepository walletRepository;
     private final WalletMapper walletMapper;
     private final TransactionRepository transactionRepository;
+    private final TransactionMapper transactionMapper;
 
     @Autowired
-    public WalletServiceImpl(CustomerRepository customerRepository, WalletRepository walletRepository, WalletMapper walletMapper, TransactionRepository transactionRepository) {
+    public WalletServiceImpl(CustomerRepository customerRepository, WalletRepository walletRepository, WalletMapper walletMapper, TransactionRepository transactionRepository , TransactionMapper transactionMapper) {
         this.customerRepository = customerRepository;
         this.walletRepository = walletRepository;
         this.walletMapper = walletMapper;
         this.transactionRepository = transactionRepository;
+        this.transactionMapper = transactionMapper;
     }
 
     @Override
@@ -63,7 +67,7 @@ public class WalletServiceImpl implements WalletService{
 
     @Override
     @Transactional
-    public WalletResponse deposit(Long walletId , DepositRequest request){
+    public DepositResponse deposit(Long walletId , DepositRequest request){
         Wallet wallet = walletRepository.findById(walletId).orElseThrow(()->new WalletNotFoundException("Wallet Not Found With ID "+walletId));
         BigDecimal curretBalance = wallet.getBalance();
         BigDecimal newBalace = curretBalance.add(request.getAmount());
@@ -79,6 +83,6 @@ public class WalletServiceImpl implements WalletService{
         walletRepository.save(wallet);
         transactionRepository.save(transaction);
 
-        return walletMapper.toResponse(wallet);
+        return transactionMapper.depositResponse(transaction);
     }
 }

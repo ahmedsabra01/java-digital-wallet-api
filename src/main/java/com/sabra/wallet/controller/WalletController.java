@@ -3,6 +3,7 @@ package com.sabra.wallet.controller;
 
 import com.sabra.wallet.dto.request.DepositRequest;
 import com.sabra.wallet.dto.request.WalletCreateRequest;
+import com.sabra.wallet.dto.response.DepositResponse;
 import com.sabra.wallet.dto.response.WalletResponse;
 import com.sabra.wallet.service.WalletService;
 import jakarta.validation.Valid;
@@ -22,16 +23,16 @@ public class WalletController {
     public WalletResponse createWallet(@PathVariable Long customerId ,@Valid @RequestBody WalletCreateRequest request){
         return walletService.createWallet(customerId , request);
     }
-    @GetMapping("/customers/{customerID}/wallet")
-    public WalletResponse getWalletByCustomerID(@PathVariable Long customerID){
-        return walletService.getWalletByCustomerId(customerID);
+    @GetMapping("/customers/{customerId}/wallet")
+    public WalletResponse getWalletByCustomerId(@PathVariable Long customerId){
+        return walletService.getWalletByCustomerId(customerId);
     }
     @GetMapping("/wallets/{walletId}")
     public WalletResponse getWalletByWalletId(@PathVariable Long walletId){
         return walletService.getWalletByWalletId(walletId);
     }
     @PostMapping("/wallets/{walletId}/deposit")
-    public WalletResponse deposit(@PathVariable Long walletId ,@RequestBody @Valid DepositRequest request){
+    public DepositResponse deposit(@PathVariable Long walletId ,@RequestBody @Valid DepositRequest request){
         return walletService.deposit(walletId , request);
     }
 }

@@ -24,7 +24,9 @@ A Java Spring Boot REST API for a digital wallet and banking system — customer
 * [x] One wallet per customer rule
 * [x] Deposit operation with transaction recording
 * [x] Transactional balance updates using `@Transactional`
-* [ ] Transaction history with pagination
+* [x] Deposit response with transaction details
+* [x] Transaction response mapping
+* [x] Transaction history with pagination
 * [ ] Withdrawal / transfer logic
 * [ ] Validation & centralized exception handling improvements
 * [ ] Authentication & authorization
@@ -138,7 +140,36 @@ Example request:
 }
 ```
 
+Example response:
+
+```json
+{
+  "transactionId": 1,
+  "walletId": 1,
+  "transactionType": "DEPOSIT",
+  "amount": 500.00,
+  "balanceAfter": 500.00,
+  "createdAt": "2026-09-03T10:30:00"
+}
+```
+
 The deposit operation updates the wallet balance and records the operation as a `DEPOSIT` transaction within a transactional operation.
+
+### Get Wallet Transaction History
+
+```http
+GET /api/wallets/{walletId}/transactions
+```
+
+The transaction history endpoint supports pagination.
+
+Example:
+
+```http
+GET /api/wallets/1/transactions?page=0&size=10
+```
+
+Transactions are returned as `TransactionResponse` objects and include transaction details such as transaction type, amount, balance after the transaction, related transaction ID, and creation timestamp.
 
 If a requested customer or wallet does not exist, the API currently returns a `404 Not Found` response through the global exception handling layer.
 
@@ -158,7 +189,6 @@ mvn spring-boot:run
 
 ## Roadmap
 
-* Add transaction response and transaction history with pagination
 * Add withdrawal and transfer operations
 * Improve validation and centralized exception handling
 * Add authentication and authorization using Spring Security and JWT
