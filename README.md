@@ -18,14 +18,15 @@ A Java Spring Boot REST API for a digital wallet and banking system — customer
 
 * [x] Project setup (Spring Boot + MySQL connection)
 * [x] Core entities and relationships (Customer, Wallet, Transaction, User)
-* [x] Customer creation endpoint
-* [x] Get customer by ID endpoint
-* [x] Basic custom exception handling for missing customers
-* [ ] Customer management endpoints
-* [ ] Wallet management endpoints
-* [ ] Deposit / withdrawal / transfer logic
+* [x] Customer management endpoints (create, get by ID, get all, update, delete)
+* [x] Basic global exception handling
+* [x] Wallet management endpoints (create, get by customer ID, get by wallet ID)
+* [x] One wallet per customer rule
+* [x] Deposit operation with transaction recording
+* [x] Transactional balance updates using `@Transactional`
 * [ ] Transaction history with pagination
-* [ ] Validation & centralized exception handling
+* [ ] Withdrawal / transfer logic
+* [ ] Validation & centralized exception handling improvements
 * [ ] Authentication & authorization
 * [ ] Automated tests
 * [ ] API documentation
@@ -81,7 +82,65 @@ Example:
 GET /api/customers/1
 ```
 
-If the requested customer does not exist, the API currently returns a `404 Not Found` response through the global exception handling layer.
+### Get All Customers
+
+```http
+GET /api/customers
+```
+
+### Update Customer
+
+```http
+PUT /api/customers/{id}
+```
+
+Example:
+
+```http
+PUT /api/customers/1
+```
+
+### Delete Customer
+
+```http
+DELETE /api/customers/{id}
+```
+
+### Create Wallet
+
+```http
+POST /api/customers/{customerId}/wallet
+```
+
+### Get Wallet by Customer ID
+
+```http
+GET /api/customers/{customerId}/wallet
+```
+
+### Get Wallet by Wallet ID
+
+```http
+GET /api/wallets/{walletId}
+```
+
+### Deposit
+
+```http
+POST /api/wallets/{walletId}/deposit
+```
+
+Example request:
+
+```json
+{
+  "amount": 500.00
+}
+```
+
+The deposit operation updates the wallet balance and records the operation as a `DEPOSIT` transaction within a transactional operation.
+
+If a requested customer or wallet does not exist, the API currently returns a `404 Not Found` response through the global exception handling layer.
 
 ## Setup
 
@@ -99,11 +158,9 @@ mvn spring-boot:run
 
 ## Roadmap
 
-* Complete customer management
-* Implement wallet management
-* Add deposits, withdrawals, and transfers
-* Add transaction history with pagination
-* Improve centralized exception handling and error responses
+* Add transaction response and transaction history with pagination
+* Add withdrawal and transfer operations
+* Improve validation and centralized exception handling
 * Add authentication and authorization using Spring Security and JWT
 * Add automated tests
 * Add API documentation with Swagger / OpenAPI

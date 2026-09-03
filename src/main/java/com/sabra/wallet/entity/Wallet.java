@@ -38,6 +38,7 @@ public class Wallet {
     @PrePersist
     protected void onCreate(){
         this.createdAt = LocalDateTime.now();
+        this.balance = BigDecimal.ZERO;
     }
 
     public Long getId() {
