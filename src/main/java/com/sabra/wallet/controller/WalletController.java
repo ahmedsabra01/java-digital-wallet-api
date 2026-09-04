@@ -3,8 +3,10 @@ package com.sabra.wallet.controller;
 
 import com.sabra.wallet.dto.request.DepositRequest;
 import com.sabra.wallet.dto.request.WalletCreateRequest;
+import com.sabra.wallet.dto.request.WithdrawalRequest;
 import com.sabra.wallet.dto.response.DepositResponse;
 import com.sabra.wallet.dto.response.WalletResponse;
+import com.sabra.wallet.dto.response.WithdrawalResponse;
 import com.sabra.wallet.service.WalletService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,5 +36,9 @@ public class WalletController {
     @PostMapping("/wallets/{walletId}/deposit")
     public DepositResponse deposit(@PathVariable Long walletId ,@RequestBody @Valid DepositRequest request){
         return walletService.deposit(walletId , request);
+    }
+    @PostMapping("/wallets/{walletID}/withdraw")
+    public WithdrawalResponse withdraw(@PathVariable Long walletID, @Valid @RequestBody WithdrawalRequest request){
+        return walletService.withdraw(walletID,request);
     }
 }

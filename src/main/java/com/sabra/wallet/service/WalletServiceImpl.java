@@ -2,13 +2,16 @@ package com.sabra.wallet.service;
 
 import com.sabra.wallet.dto.request.DepositRequest;
 import com.sabra.wallet.dto.request.WalletCreateRequest;
+import com.sabra.wallet.dto.request.WithdrawalRequest;
 import com.sabra.wallet.dto.response.DepositResponse;
 import com.sabra.wallet.dto.response.WalletResponse;
+import com.sabra.wallet.dto.response.WithdrawalResponse;
 import com.sabra.wallet.entity.Customer;
 import com.sabra.wallet.entity.Transaction;
 import com.sabra.wallet.entity.TransactionType;
 import com.sabra.wallet.entity.Wallet;
 import com.sabra.wallet.exception.CustomerNotFoundException;
+import com.sabra.wallet.exception.InsufficientBalanceException;
 import com.sabra.wallet.exception.WalletAlreadyExistsException;
 import com.sabra.wallet.exception.WalletNotFoundException;
 import com.sabra.wallet.mapper.TransactionMapper;
@@ -54,7 +57,7 @@ public class WalletServiceImpl implements WalletService{
 
     @Override
     public WalletResponse getWalletByCustomerId(Long customerId) {
-        Customer customer = customerRepository.findById(customerId).orElseThrow(()->new CustomerNotFoundException("Customer Not Found With ID "+ customerId));
+        customerRepository.findById(customerId).orElseThrow(()->new CustomerNotFoundException("Customer Not Found With ID "+ customerId));
         Wallet wallet = walletRepository.findByCustomerId(customerId).orElseThrow(()-> new WalletNotFoundException("Wallet Not Found For Customer ID "+ customerId));
         return walletMapper.toResponse(wallet);
     }
@@ -69,15 +72,15 @@ public class WalletServiceImpl implements WalletService{
     @Transactional
     public DepositResponse deposit(Long walletId , DepositRequest request){
         Wallet wallet = walletRepository.findById(walletId).orElseThrow(()->new WalletNotFoundException("Wallet Not Found With ID "+walletId));
-        BigDecimal curretBalance = wallet.getBalance();
-        BigDecimal newBalace = curretBalance.add(request.getAmount());
+        BigDecimal currentBalance = wallet.getBalance();
+        BigDecimal newBalance = currentBalance.add(request.getAmount());
 
-        wallet.setBalance(newBalace);
+        wallet.setBalance(newBalance);
 
         Transaction transaction = new Transaction();
         transaction.setWallet(wallet);
         transaction.setAmount(request.getAmount());
-        transaction.setBalanceAfter(newBalace);
+        transaction.setBalanceAfter(newBalance);
         transaction.setTransactionType(TransactionType.DEPOSIT);
 
         walletRepository.save(wallet);
@@ -85,4 +88,31 @@ public class WalletServiceImpl implements WalletService{
 
         return transactionMapper.depositResponse(transaction);
     }
+
+    @Override
+    @Transactional
+    public WithdrawalResponse withdraw(Long walletId, WithdrawalRequest request) {
+        Wallet wallet = walletRepository.findById(walletId).orElseThrow(()-> new WalletNotFoundException("Wallet Not Found With ID "+ walletId));
+        BigDecimal currentBalance = wallet.getBalance();
+        BigDecimal amount = request.getAmount();
+        if(currentBalance.compareTo(amount)<0){
+            throw new InsufficientBalanceException("Insufficient Balance");
+        }
+        BigDecimal newBalance = currentBalance.subtract(amount);
+        wallet.setBalance(newBalance);
+
+        Transaction transaction = new Transaction();
+        transaction.setWallet(wallet);
+        transaction.setAmount(amount);
+        transaction.setTransactionType(TransactionType.WITHDRAWAL);
+        transaction.setBalanceAfter(newBalance);
+
+        walletRepository.save(wallet);
+        transactionRepository.save(transaction);
+
+
+
+        return transactionMapper.withdrawalResponse(transaction);
+    }
+
 }
