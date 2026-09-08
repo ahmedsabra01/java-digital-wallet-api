@@ -43,7 +43,17 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(InsufficientBalanceException.class)
-    public ResponseEntity<ErrorResponse> handleInsufficentBalance(InsufficientBalanceException ex , HttpServletRequest request){
+    public ResponseEntity<ErrorResponse> handleInsufficientBalance(InsufficientBalanceException ex , HttpServletRequest request){
+        ErrorResponse errorResponse = new ErrorResponse(LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                ex.getMessage(),
+                request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    @ExceptionHandler(SameWalletTransferException.class)
+    public ResponseEntity<ErrorResponse> handleSameWalletTransfer(SameWalletTransferException ex , HttpServletRequest request){
         ErrorResponse errorResponse = new ErrorResponse(LocalDateTime.now(),
                 HttpStatus.BAD_REQUEST.value(),
                 HttpStatus.BAD_REQUEST.getReasonPhrase(),

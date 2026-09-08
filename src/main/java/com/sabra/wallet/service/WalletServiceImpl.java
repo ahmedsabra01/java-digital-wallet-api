@@ -1,19 +1,18 @@
 package com.sabra.wallet.service;
 
 import com.sabra.wallet.dto.request.DepositRequest;
+import com.sabra.wallet.dto.request.TransferRequest;
 import com.sabra.wallet.dto.request.WalletCreateRequest;
 import com.sabra.wallet.dto.request.WithdrawalRequest;
 import com.sabra.wallet.dto.response.DepositResponse;
+import com.sabra.wallet.dto.response.TransferResponse;
 import com.sabra.wallet.dto.response.WalletResponse;
 import com.sabra.wallet.dto.response.WithdrawalResponse;
 import com.sabra.wallet.entity.Customer;
 import com.sabra.wallet.entity.Transaction;
 import com.sabra.wallet.entity.TransactionType;
 import com.sabra.wallet.entity.Wallet;
-import com.sabra.wallet.exception.CustomerNotFoundException;
-import com.sabra.wallet.exception.InsufficientBalanceException;
-import com.sabra.wallet.exception.WalletAlreadyExistsException;
-import com.sabra.wallet.exception.WalletNotFoundException;
+import com.sabra.wallet.exception.*;
 import com.sabra.wallet.mapper.TransactionMapper;
 import com.sabra.wallet.mapper.WalletMapper;
 import com.sabra.wallet.repository.CustomerRepository;
@@ -24,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.Objects;
 
 @Service
 public class WalletServiceImpl implements WalletService{
@@ -113,6 +113,58 @@ public class WalletServiceImpl implements WalletService{
 
 
         return transactionMapper.withdrawalResponse(transaction);
+    }
+
+    @Override
+    @Transactional
+    public TransferResponse transfer(Long senderWalletId, TransferRequest request) {
+        Wallet walletSender = walletRepository.findById(senderWalletId).orElseThrow(()->new WalletNotFoundException("Wallet Not Found With ID "+ senderWalletId));
+        Wallet walletReceiver = walletRepository.findById(request.getReceiverWalletId()).orElseThrow(()-> new WalletNotFoundException("Wallet Not Found With ID "+ request.getReceiverWalletId()));
+
+        BigDecimal amount = request.getAmount();
+        BigDecimal senderBalance = walletSender.getBalance();
+
+        if (Objects.equals(walletSender.getId() , walletReceiver.getId())){
+            throw new SameWalletTransferException("You Can't Transfer To Same Wallet");
+        }
+
+        if (senderBalance.compareTo(amount)<0){
+            throw new InsufficientBalanceException("Insufficient Balance");
+        }
+        BigDecimal senderBalanceAfter = senderBalance.subtract(amount);
+        BigDecimal receiverBalanceAfter = walletReceiver.getBalance().add(amount);
+
+        walletSender.setBalance(senderBalanceAfter);
+        walletReceiver.setBalance(receiverBalanceAfter);
+
+        Transaction senderTransaction = new Transaction();
+        senderTransaction.setWallet(walletSender);
+        senderTransaction.setBalanceAfter(senderBalanceAfter);
+        senderTransaction.setTransactionType(TransactionType.TRANSFER_OUT);
+        senderTransaction.setAmount(amount);
+
+        Transaction receiverTransaction = new Transaction();
+        receiverTransaction.setAmount(amount);
+        receiverTransaction.setTransactionType(TransactionType.TRANSFER_IN);
+        receiverTransaction.setWallet(walletReceiver);
+        receiverTransaction.setBalanceAfter(receiverBalanceAfter);
+
+
+        walletRepository.save(walletSender);
+        walletRepository.save(walletReceiver);
+
+        transactionRepository.save(senderTransaction);
+        transactionRepository.save(receiverTransaction);
+
+        senderTransaction.setRelatedTransactionId(receiverTransaction.getId());
+        receiverTransaction.setRelatedTransactionId(senderTransaction.getId());
+
+        transactionRepository.save(senderTransaction);
+        transactionRepository.save(receiverTransaction);
+
+
+        return transactionMapper.transferResponse(senderTransaction,receiverTransaction);
+
     }
 
 }

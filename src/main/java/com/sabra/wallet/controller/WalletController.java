@@ -2,9 +2,11 @@ package com.sabra.wallet.controller;
 
 
 import com.sabra.wallet.dto.request.DepositRequest;
+import com.sabra.wallet.dto.request.TransferRequest;
 import com.sabra.wallet.dto.request.WalletCreateRequest;
 import com.sabra.wallet.dto.request.WithdrawalRequest;
 import com.sabra.wallet.dto.response.DepositResponse;
+import com.sabra.wallet.dto.response.TransferResponse;
 import com.sabra.wallet.dto.response.WalletResponse;
 import com.sabra.wallet.dto.response.WithdrawalResponse;
 import com.sabra.wallet.service.WalletService;
@@ -40,5 +42,10 @@ public class WalletController {
     @PostMapping("/wallets/{walletID}/withdraw")
     public WithdrawalResponse withdraw(@PathVariable Long walletID, @Valid @RequestBody WithdrawalRequest request){
         return walletService.withdraw(walletID,request);
+    }
+
+    @PostMapping("/wallets/{walletId}/transfer")
+    public TransferResponse transfer(@PathVariable Long walletId ,@Valid @RequestBody TransferRequest request){
+        return walletService.transfer(walletId,request);
     }
 }

@@ -3,10 +3,12 @@ package com.sabra.wallet.mapper;
 
 import com.sabra.wallet.dto.response.DepositResponse;
 import com.sabra.wallet.dto.response.TransactionResponse;
+import com.sabra.wallet.dto.response.TransferResponse;
 import com.sabra.wallet.dto.response.WithdrawalResponse;
 import com.sabra.wallet.entity.Transaction;
 
 import org.springframework.stereotype.Component;
+
 
 
 @Component
@@ -39,5 +41,19 @@ public class TransactionMapper {
                 transaction.getBalanceAfter(),
                 transaction.getCreatedAt());
     }
+
+    public TransferResponse transferResponse(Transaction senderTransaction ,Transaction receiverTransaction ){
+        return new TransferResponse(receiverTransaction.getWallet().getId(),
+                senderTransaction.getWallet().getId(),
+                senderTransaction.getAmount(),
+                senderTransaction.getBalanceAfter(),
+                receiverTransaction.getBalanceAfter(),
+                receiverTransaction.getId(),
+                senderTransaction.getId(),
+                senderTransaction.getCreatedAt());
+
+    }
+
+
 
 }
