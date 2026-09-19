@@ -19,7 +19,7 @@ Spring Security with JWT-based authentication and authorization will be added in
 * [x] Project setup (Spring Boot + MySQL connection)
 * [x] Core entities and relationships (Customer, Wallet, Transaction, User)
 * [x] Customer management endpoints (create, get by ID, get all, update, delete)
-* [x] Basic global exception handling
+* [x] Global exception handling
 * [x] Wallet management endpoints (create, get by customer ID, get by wallet ID)
 * [x] One wallet per customer rule
 * [x] Deposit operation with transaction recording
@@ -31,10 +31,11 @@ Spring Security with JWT-based authentication and authorization will be added in
 * [x] Transfer response with sender and receiver details
 * [x] Transaction response mapping
 * [x] Transaction history with pagination
-* [x] Basic request validation using Jakarta Bean Validation
+* [x] Request validation using Jakarta Bean Validation
+* [x] Centralized validation error handling
 * [x] Insufficient balance handling
 * [x] Same-wallet transfer validation
-* [ ] Validation & centralized exception handling improvements
+* [x] Generic exception fallback handling
 * [ ] Authentication & authorization
 * [ ] Automated tests
 * [ ] API documentation
@@ -288,25 +289,35 @@ Transactions are returned as `TransactionResponse` objects and include details s
 
 The API uses a centralized global exception handling layer through `@RestControllerAdvice`.
 
-Currently handled business exceptions include:
+Currently handled business and request exceptions include:
 
-* Customer not found
-* Wallet not found
-* Wallet already exists for customer
-* Insufficient wallet balance
-* Transfer to the same wallet
+* Customer not found → `404 Not Found`
+* Wallet not found → `404 Not Found`
+* Wallet already exists for customer → `409 Conflict`
+* Insufficient wallet balance → `400 Bad Request`
+* Transfer to the same wallet → `400 Bad Request`
+* Invalid request data → `400 Bad Request`
+* Unexpected application exceptions → `500 Internal Server Error`
 
-Example error response:
+Validation errors are collected by the global exception handler and returned with field-specific messages.
+
+Example validation error response:
 
 ```json
 {
-  "timestamp": "2026-09-03T10:40:00",
+  "timestamp": "2026-09-19T04:32:46",
   "status": 400,
   "error": "Bad Request",
-  "message": "Insufficient Balance",
-  "path": "/api/wallets/1/withdraw"
+  "message": "Validation Failed",
+  "path": "/api/customers",
+  "validationErrors": {
+    "fullName": "Full Name is Required",
+    "email": "Email must be Valid"
+  }
 }
 ```
+
+For unexpected exceptions, the API returns a generic error message rather than exposing internal exception details.
 
 ---
 
@@ -353,7 +364,7 @@ Sender Wallet
      │
      └── TRANSFER_OUT
               │
-              └── relatedTransactionId
+              └── relatedTransactionId 
                        │
                        └── TRANSFER_IN
                               │
@@ -368,77 +379,4 @@ This design makes the transfer traceable from either wallet's transaction histor
 
 ## Validation
 
-Request DTOs use Jakarta Bean Validation for basic input validation.
-
-Examples include:
-
-* Required fields using `@NotNull`
-* Email format validation using `@Email`
-* Positive monetary amounts using `@DecimalMin`
-
-Financial amounts are represented using Java `BigDecimal` to provide precise decimal arithmetic suitable for monetary calculations.
-
----
-
-## Setup
-
-Clone the repository:
-
-```bash
-git clone https://github.com/ahmedsabra01/java-digital-wallet-api.git
-cd java-digital-wallet-api
-```
-
-Create the MySQL database:
-
-```bash
-mysql -u root -p -e "CREATE DATABASE wallet_db;"
-```
-
-Configure your MySQL credentials in:
-
-```text
-src/main/resources/application.properties
-```
-
-Then run the application:
-
-```bash
-mvn spring-boot:run
-```
-
-The API will start using the configured Spring Boot server port.
-
----
-
-## Roadmap
-
-### Core Banking Operations
-
-* [x] Customer management
-* [x] Wallet creation and retrieval
-* [x] Deposit
-* [x] Withdrawal
-* [x] Wallet-to-wallet transfer
-* [x] Transaction history
-
-### Backend Improvements
-
-* [ ] Improve request validation
-* [ ] Expand centralized exception handling
-* [ ] Add authentication and authorization
-* [ ] Implement Spring Security with JWT
-* [ ] Add automated unit and integration tests
-* [ ] Add API documentation with Swagger / OpenAPI
-* [ ] Improve concurrency handling for financial operations
-
-### Project Documentation
-
-* [ ] Add architecture diagram
-* [ ] Add database ER diagram
-* [ ] Add API documentation
-* [ ] Add authentication flow documentation
-
----
-
-*This README will be expanded as the project progresses. The project is intentionally being developed incrementally, with each phase focusing on real backend concepts, transactional integrity, and business rules rather than simply implementing CRUD operations.*
+Request DTOs use Jakarta Bean Validation for input validation
