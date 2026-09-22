@@ -1,8 +1,8 @@
 # Digital Wallet & Banking REST API
 
-A Java Spring Boot REST API for a digital wallet and banking system — customer accounts, wallets, deposits, withdrawals, transfers, and transaction history, built with a layered architecture and Spring Data JPA.
+A Java Spring Boot REST API for a digital wallet and banking system — customer accounts, wallets, deposits, withdrawals, transfers, authentication, and transaction history, built with a layered architecture and Spring Data JPA.
 
-**Status:** In development. This project is being built incrementally, phase by phase, with a focus on transactional integrity, clean backend design, and real-world banking workflows rather than surface-level CRUD.
+**Status:** In development. This project is being built incrementally, phase by phase, with a focus on transactional integrity, clean backend design, secure authentication, and real-world banking workflows rather than surface-level CRUD.
 
 ## Tech Stack
 
@@ -11,8 +11,10 @@ A Java Spring Boot REST API for a digital wallet and banking system — customer
 * Spring Data JPA / Hibernate
 * MySQL
 * Maven
+* Spring Security
+* BCrypt password hashing
 
-Spring Security with JWT-based authentication and authorization will be added in a later phase.
+JWT-based authentication and authorization are currently being implemented.
 
 ## Progress
 
@@ -36,7 +38,15 @@ Spring Security with JWT-based authentication and authorization will be added in
 * [x] Insufficient balance handling
 * [x] Same-wallet transfer validation
 * [x] Generic exception fallback handling
-* [ ] Authentication & authorization
+* [x] Spring Security configuration
+* [x] BCrypt password hashing
+* [x] User registration
+* [x] Username and email uniqueness validation
+* [x] Registration endpoint
+* [ ] Login authentication
+* [ ] JWT generation and validation
+* [ ] Endpoint authorization
+* [ ] Resource ownership validation
 * [ ] Automated tests
 * [ ] API documentation
 
@@ -47,6 +57,7 @@ Spring Security with JWT-based authentication and authorization will be added in
 * Each transaction belongs to a single wallet.
 * A transfer is represented by two transaction records: a `TRANSFER_OUT` transaction for the sender and a `TRANSFER_IN` transaction for the receiver.
 * Transfer transactions are linked using `relatedTransactionId` to connect the sender and receiver sides of the same transfer.
+* A `User` represents the authentication account and is linked to one `Customer`.
 
 ## Architecture
 
@@ -64,7 +75,9 @@ MySQL Database
 
 DTOs are used for API requests and responses, while mappers handle conversion between DTOs and entities.
 
-The service layer contains the main business logic, including wallet balance updates, transaction recording, validation, and transfer processing.
+The service layer contains the main business logic, including wallet balance updates, transaction recording, validation, transfer processing, and user registration.
+
+Spring Security is responsible for the security layer before requests reach the application controllers.
 
 ## Current API
 
@@ -120,6 +133,40 @@ PUT /api/customers/1
 ```http
 DELETE /api/customers/{id}
 ```
+
+---
+
+### Authentication
+
+#### Register User
+
+```http
+POST /api/auth/register
+```
+
+Example request:
+
+```json
+{
+  "fullName": "Ahmed Sabra",
+  "email": "ahmed@example.com",
+  "username": "ahmed",
+  "password": "Ahmed123"
+}
+```
+
+During registration:
+
+1. The request is validated using Jakarta Bean Validation.
+2. The system checks whether the username already exists.
+3. The system checks whether the email already exists.
+4. A new `Customer` is created.
+5. The password is hashed using BCrypt.
+6. A new `User` authentication account is created.
+7. The `User` is linked to the `Customer`.
+8. The operation is executed inside a `@Transactional` boundary.
+
+Passwords are never stored as plain text.
 
 ---
 
@@ -246,137 +293,4 @@ Example response:
 The transfer operation:
 
 1. Validates the sender and receiver wallets.
-2. Prevents transfers to the same wallet.
-3. Checks that the sender has sufficient balance.
-4. Deducts the amount from the sender wallet.
-5. Adds the amount to the receiver wallet.
-6. Creates a `TRANSFER_OUT` transaction for the sender.
-7. Creates a `TRANSFER_IN` transaction for the receiver.
-8. Links the two transaction records using `relatedTransactionId`.
-9. Executes the entire operation inside a single `@Transactional` boundary.
-
-This ensures that the balance changes and transaction records are committed as one atomic operation.
-
----
-
-### Get Wallet Transaction History
-
-```http
-GET /api/wallets/{walletId}/transactions
-```
-
-The transaction history endpoint supports pagination.
-
-Example:
-
-```http
-GET /api/wallets/1/transactions?page=0&size=10
-```
-
-Transactions are returned as `TransactionResponse` objects and include details such as:
-
-* Transaction ID
-* Wallet ID
-* Transaction type
-* Amount
-* Balance after the transaction
-* Related transaction ID
-* Creation timestamp
-
----
-
-## Error Handling
-
-The API uses a centralized global exception handling layer through `@RestControllerAdvice`.
-
-Currently handled business and request exceptions include:
-
-* Customer not found → `404 Not Found`
-* Wallet not found → `404 Not Found`
-* Wallet already exists for customer → `409 Conflict`
-* Insufficient wallet balance → `400 Bad Request`
-* Transfer to the same wallet → `400 Bad Request`
-* Invalid request data → `400 Bad Request`
-* Unexpected application exceptions → `500 Internal Server Error`
-
-Validation errors are collected by the global exception handler and returned with field-specific messages.
-
-Example validation error response:
-
-```json
-{
-  "timestamp": "2026-09-19T04:32:46",
-  "status": 400,
-  "error": "Bad Request",
-  "message": "Validation Failed",
-  "path": "/api/customers",
-  "validationErrors": {
-    "fullName": "Full Name is Required",
-    "email": "Email must be Valid"
-  }
-}
-```
-
-For unexpected exceptions, the API returns a generic error message rather than exposing internal exception details.
-
----
-
-## Transaction Management
-
-Financial operations such as deposits, withdrawals, and transfers use Spring's `@Transactional` to ensure that wallet balance updates and transaction records are handled as a single atomic operation.
-
-For example, during a transfer:
-
-```text
-Validate request
-      ↓
-Find sender and receiver wallets
-      ↓
-Validate balance and business rules
-      ↓
-Update sender balance
-      ↓
-Update receiver balance
-      ↓
-Create TRANSFER_OUT transaction
-      ↓
-Create TRANSFER_IN transaction
-      ↓
-Link related transactions
-      ↓
-Commit transaction
-```
-
-If an error occurs during the operation, the transaction can be rolled back to prevent wallet balances and transaction history from becoming inconsistent.
-
----
-
-## Transaction Design
-
-Transactions represent financial events associated with a wallet.
-
-For deposits and withdrawals, a single transaction record is created.
-
-For wallet-to-wallet transfers, the system creates two transaction records:
-
-```text
-Sender Wallet
-     │
-     └── TRANSFER_OUT
-              │
-              └── relatedTransactionId 
-                       │
-                       └── TRANSFER_IN
-                              │
-                              └── Receiver Wallet
-```
-
-The two records represent the two sides of the same transfer and are linked using `relatedTransactionId`.
-
-This design makes the transfer traceable from either wallet's transaction history and provides an auditable record of the movement of funds.
-
----
-
-## Validation
-
-Request DTOs use Jakarta Bean Validation for input validation
+2. Prevents transfers to the same w

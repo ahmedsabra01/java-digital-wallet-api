@@ -11,7 +11,7 @@ public class Customer {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     private Long id;
-    @Column(name = "full_name")
+    @Column(name = "full_name" , unique = true)
     private String fullName;
     @Column(name = "email",unique = true)
     private String email;
